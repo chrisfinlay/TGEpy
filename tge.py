@@ -3,12 +3,7 @@ import matplotlib.pyplot as plt
 
 from numba import njit, prange
 
-# from jax import jit
-# import jax.numpy as jnp
-
 from scipy.special import jv
-
-# from datetime import datetime
 
 k_B = 1.380649e3 # Jy . m^2 / K
 c = 299792458.0    # m / s
@@ -522,7 +517,7 @@ def random_uv(
 
 
 @njit(parallel=True)
-def grid(uv, vis, kxy, UW, A=None):
+def grid(uv, vis, kxy, U0, A=None):
     """Grid the visibilities by convolving them with a window function in Fourier space.
     V_cg term in Eqn (4) from arXiv:1603.02513
 
@@ -549,17 +544,17 @@ def grid(uv, vis, kxy, UW, A=None):
     uv = np.where(uv[:, :1] < 0, -uv, uv)
     vis = np.where(uv[:, 0] < 0, np.conjugate(vis), vis)
     if A is None:
-        A = 1.0 / (np.pi * UW**2)
+        A = 1.0 / (np.pi * U0**2)
     vis_grid = np.zeros(len(kxy), dtype=np.complex128)
     weights = np.zeros(len(kxy))
     for i in prange(len(kxy)):
         dku = np.sqrt(np.sum((uv - kxy[i, :]) ** 2, axis=-1))
-        idx = np.where(dku < 3 * UW)[0]
+        idx = np.where(dku < 3 * U0)[0]
         if len(idx) == 0:
             vis_grid[i] = 0.0
         else:
             dku_ = dku[idx]
-            w = gauss(dku_, A, UW)  # \tilde{W}
+            w = gauss(dku_, A, U0)  # \tilde{W}
             weights[i] = np.sum(w)  # K_1g
             vis_grid[i] = np.sum(vis[idx] * w)
 
