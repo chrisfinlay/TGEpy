@@ -1,9 +1,6 @@
 import numpy as np
-import matplotlib.pyplot as plt
-
-from numba import njit, prange
-
 from scipy.special import jv
+from numba import njit, prange
 
 k_B = 1.380649e3 # Jy . m^2 / K
 c = 299792458.0    # m / s
