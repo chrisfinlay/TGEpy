@@ -252,7 +252,7 @@ def set_nan(x, frac, seed=123):
     return x.reshape(shape)
 
 
-def complex_noise(shape, sigma, seed=124):
+def complex_noise(shape: tuple, sigma: float, seed: int=124) -> np.array:
     """Generate samples from CN(0, sigma^2)
     
     Parameters:
@@ -275,7 +275,7 @@ def complex_noise(shape, sigma, seed=124):
     return noise
 
 
-def beam_constants(D, freq, dBdT, f):
+def beam_constants(D: float, freq: float, dBdT: float=None, f: float=0.8) -> dict:
     """Calculate various constants derived from the antenna dimensions.
 
     Parameters:
@@ -286,6 +286,8 @@ def beam_constants(D, freq, dBdT, f):
         Observation frequency in Hz.
     dBdT: float
         Conversion factor from temperature in K to spectral flux density in Jy.
+    f: float
+        Fraction of the expected FoV to gaussian taper to. A value in [0,1].
 
     Returns:
     --------
@@ -294,6 +296,9 @@ def beam_constants(D, freq, dBdT, f):
         tapering fraction.
     """
     lamda = c / freq
+
+    if dBdT is None:
+        dBdT = 2 * k_B / lamda**2
 
     thetaFWHM = 1.03 * (lamda / D)  # thetaFWHM = 1.025 * (lamda / D)
     theta0 = 0.6 * thetaFWHM
@@ -326,6 +331,7 @@ def beam_constants(D, freq, dBdT, f):
 
     constants = {
         "lamda": lamda,
+        "dBdT": dBdT,
         "thetaFWHM": thetaFWHM,
         "theta0": theta0,
         "U0": U0,
@@ -348,6 +354,57 @@ def beam_constants(D, freq, dBdT, f):
 
     return constants
 
+def lm_to_radec(lm: np.array, ra0: float, dec0: float) -> np.array:
+    """Convert sky coordinates from projected radians to right ascension and declination in degrees. 
+
+    Parameters:
+    -----------
+    lm: np.array (n_points, 2)
+        lm-coordinate positions in projected radians.
+    ra0: float
+        Right ascension of the phase centre in degrees.
+    dec0: float
+        Declination of the phase centre in degrees.
+
+    Returns:
+    --------
+    radec: np.array (n_points, 2)
+        Right ascension and declination of the lm-coordinate positions.
+    """
+
+    ra0, dec0 = np.deg2rad([ra0, dec0])
+    l, m = lm.T
+    n = np.sqrt(1 - l**2 - m**2)
+    dec = np.arcsin(m * np.cos(dec0) + n * np.sin(dec0))
+    ra = ra0 + np.arctan2(l, n * np.cos(dec0) - m * np.sin(dec0))
+    
+    return np.rad2deg(np.array([ra, dec]).T)
+
+def radec_to_lm(radec, ra0, dec0):
+    """Convert sky coordinates from right ascension and declination in degrees to projected radians. 
+
+    Parameters:
+    -----------
+    radec: np.array (n_points, 2)
+        Right ascension and declination of the positions.
+    ra0: float
+        Right ascension of the phase centre in degrees.
+    dec0: float
+        Declination of the phase centre in degrees.
+
+    Returns:
+    --------
+    lm: np.array (n_points, 2)
+        lm-coordinate positions in projected radians.
+    """
+
+    ra0, dec0 = np.deg2rad([ra0, dec0])
+    ra, dec = np.deg2rad(radec).T
+    delta_ra = ra - ra0
+    l = np.cos(dec) * np.sin(delta_ra)
+    m = np.sin(dec) * np.cos(dec0) - np.cos(dec) * np.sin(dec0) * np.cos(delta_ra)
+
+    return np.array([l, m]).T 
 
 def sky_coords(N_side, fov):
     """The sky coordinates for an image.
