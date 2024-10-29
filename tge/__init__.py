@@ -49,11 +49,11 @@ class TGE():
         E_g: np.ndarray (n_u*n_v, 2)
             The angular power spectrum estimate at the uv grid points.
         """
-
+        
         self.V_cg, self.K1g = grid(uv, V, self.uv_g, self.U0)
         self.B_cg, self.K2gg = grid_Pk(uv, np.abs(V)**2, self.uv_g, self.U0)
         self.E_g = (np.abs(self.V_cg)**2 - self.B_cg) / (self.K1g**2 * self.V1 - self.K2gg * self.V0)
-        
+
         return self.E_g
 
     def estimate_Cl(self, uv: np.ndarray, V: np.ndarray, sigma_n: float, 
